@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070913">
+  <meta name="description" content="Run. Jump. Survive. Reach the Core. Play Cyber Quest, an intense 2D cyberpunk platformer web game featuring 5 distinct sectors, power-ups, combat slashes, and an epic Core Guardian boss fight.">
+  <title>CYBER QUEST — 2D Cyberpunk Platformer Web Game</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- CRT Scanline & Subtle Vignette Atmosphere (toggleable in Settings) -->
+    <div id="crt-overlay" class="scanlines"></div>
+
+    <!-- Main Game Canvas -->
+    <canvas id="game-canvas" width="960" height="540"></canvas>
+
+    <!-- Debug Overlay (Toggled via F3) -->
+    <div id="debug-overlay" style="display: none;"></div>
+
+    <!-- Level Title Card Banner (Spec C) -->
+    <div id="level-title-card" class="level-title-card hidden">
+      <div id="title-card-main" class="title-card-main">SECTOR 01: NEON DISTRICT</div>
+      <div id="title-card-sub" class="title-card-sub">SURFACE INFILTRATION</div>
+    </div>
+
+    <!-- Contextual In-Level Tutorial Prompts (Spec D) -->
+    <div id="tutorial-prompt" class="tutorial-prompt hidden">
+      <span id="tutorial-prompt-text">Press SPACE or ▲ to Jump</span>
+    </div>
+
+    <!-- Achievement Toast Notification (Spec D) -->
+    <div id="achievement-toast" class="achievement-toast hidden">
+      <span class="toast-icon">🏆</span>
+      <div class="toast-body">
+        <div id="toast-title" class="toast-title">ACHIEVEMENT UNLOCKED</div>
+        <div id="toast-desc" class="toast-desc">GHOST OPERATIVE</div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         HEADS-UP DISPLAY (HUD)
+         ------------------------------------------------------------- -->
+    <div id="game-hud">
+      <!-- Left: Player Health & Lives -->
+      <div class="hud-group">
+        <div class="hud-panel hp-container">
+          <div class="hp-label-row">
+            <span>OPERATIVE HP</span>
+            <span id="hud-hp-text">100 / 100</span>
+          </div>
+          <div class="hp-bar-track">
+            <div id="hud-hp-fill" class="hp-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Level Name, Active Power-ups & Combo Badge -->
+      <div style="display:flex; flex-direction:column; align-items:center; gap: 4px;">
+        <div class="hud-panel level-badge">
+          <span id="hud-level-name">LVL 1: NEON DISTRICT</span>
+        </div>
+        <div id="hud-powerups"></div>
+        <div id="hud-combo-badge" class="hud-combo-badge hidden">x2 COMBO</div>
+      </div>
+
+      <!-- Right: Score, Shards, Timer, Options, Pause Button -->
+      <div class="hud-group">
+        <div class="hud-panel stat-pill">
+          <span class="stat-icon">💠</span>
+          <span id="hud-coins" class="stat-val">0 / 12</span>
+        </div>
+
+        <div class="hud-panel stat-pill">
+          <span class="stat-icon">SCORE</span>
+          <span id="hud-score" class="stat-val">0</span>
+        </div>
+
+        <div class="hud-panel stat-pill">
+          <span class="stat-icon">⏱️</span>
+          <span id="hud-timer" class="stat-val">00:00</span>
+        </div>
+
+        <button id="btn-hud-options" class="btn-hud-round" title="Options / Settings" aria-label="Settings">⚙️</button>
+        <button id="btn-hud-pause" class="btn-hud-round" title="Pause Game (Esc)" aria-label="Pause Game">⏸️</button>
+      </div>
+
+      <!-- Boss Bar (Level 5) -->
+      <div id="hud-boss-bar-container">
+        <div class="boss-label-row">
+          <span>⚠️ WARNING: CORE GUARDIAN</span>
+          <span id="hud-boss-hp-pct">100%</span>
+        </div>
+        <div class="boss-bar-track">
+          <div id="hud-boss-hp-fill" class="boss-bar-fill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         MOBILE ON-SCREEN TOUCH CONTROLS (Spec F)
+         ------------------------------------------------------------- -->
+    <div id="touch-controls">
+      <div class="touch-cluster">
+        <button id="touch-left" class="btn-touch" aria-label="Move Left">◀</button>
+        <button id="touch-right" class="btn-touch" aria-label="Move Right">▶</button>
+      </div>
+      <div class="touch-cluster">
+        <button id="touch-attack" class="btn-touch btn-attack" aria-label="Slash Attack">⚔️ SLASH</button>
+        <button id="touch-jump" class="btn-touch btn-jump" aria-label="Jump">▲ JUMP</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         BOOT / SYSTEM INITIALIZATION SCREEN
+         ------------------------------------------------------------- -->
+    <div id="loading-screen" class="screen-overlay">
+      <div class="boot-logo-title">CYBER QUEST</div>
+      <div class="boot-tagline">RUN. JUMP. SURVIVE. REACH THE CORE.</div>
+      <div class="boot-progress-track">
+        <div id="boot-progress-bar" class="boot-progress-bar"></div>
+      </div>
+      <div id="boot-status-text" class="boot-status">INITIALIZING SYSTEM...</div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         MAIN MENU SCREEN
+         ------------------------------------------------------------- -->
+    <div id="main-menu" class="screen-overlay hidden">
+      <div class="menu-header">
+        <h1 class="game-title">CYBER QUEST</h1>
+        <p class="game-tagline">RUN. JUMP. SURVIVE. REACH THE CORE.</p>
+      </div>
+
+      <nav class="menu-buttons">
+        <button id="btn-play" class="cyber-btn" tabindex="0">PLAY</button>
+        <button id="btn-level-select" class="cyber-btn btn-magenta" tabindex="0">MISSION ARCHIVES</button>
+        <button id="btn-how-to-play" class="cyber-btn" tabindex="0">TACTICAL BRIEFING</button>
+        <button id="btn-stats" class="cyber-btn" tabindex="0">STATISTICS & ACHIEVEMENTS</button>
+        <button id="btn-settings" class="cyber-btn" tabindex="0">OPTIONS</button>
+      </nav>
+
+      <div class="menu-footer">
+        <div class="high-score-badge">
+          HIGH SCORE: <span id="menu-high-score-val">0</span>
+        </div>
+        <div class="quick-audio-toggles">
+          <button id="btn-quick-sound" class="btn-icon-toggle" title="Toggle Sound" aria-label="Toggle Sound">🔊</button>
+          <button id="btn-quick-music" class="btn-icon-toggle" title="Toggle Music" aria-label="Toggle Music">🎵</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         LEVEL SELECT MODAL (With Medals per spec D)
+         ------------------------------------------------------------- -->
+    <div id="level-select-modal" class="screen-overlay hidden">
+      <div class="modal-card">
+        <span id="btn-close-level-select" class="modal-close-corner" role="button" aria-label="Close">✕</span>
+        <h2 class="modal-title">MISSION ARCHIVES</h2>
+        <div id="level-cards-container" class="level-cards-grid"></div>
+        <button id="btn-close-level-select-alt" class="cyber-btn" onclick="document.getElementById('btn-close-level-select').click()">RETURN TO MAIN MENU</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         HOW TO PLAY MODAL
+         ------------------------------------------------------------- -->
+    <div id="how-to-play-modal" class="screen-overlay hidden">
+      <div class="modal-card">
+        <span id="btn-close-how-to-play" class="modal-close-corner" role="button" aria-label="Close">✕</span>
+        <h2 class="modal-title">TACTICAL BRIEFING</h2>
+
+        <div class="guide-section">
+          <div class="guide-heading">DESKTOP CONTROLS</div>
+          <table class="guide-table">
+            <tr>
+              <td><span class="key-badge">A</span> / <span class="key-badge">◀</span></td>
+              <td>Move Left</td>
+              <td><span class="key-badge">D</span> / <span class="key-badge">▶</span></td>
+              <td>Move Right</td>
+            </tr>
+            <tr>
+              <td><span class="key-badge">Space</span> / <span class="key-badge">W</span> / <span class="key-badge">▲</span></td>
+              <td>Jump (Hold for higher apex)</td>
+              <td><span class="key-badge">J</span> / <span class="key-badge">X</span> / <span class="key-badge">Left Click</span></td>
+              <td>Cyber Blade Slash</td>
+            </tr>
+            <tr>
+              <td><span class="key-badge">S</span> / <span class="key-badge">▼</span></td>
+              <td>Down / Drop Platform</td>
+              <td><span class="key-badge">F3</span></td>
+              <td>Toggle Debug Overlay</td>
+            </tr>
+            <tr>
+              <td><span class="key-badge">Esc</span> / <span class="key-badge">P</span></td>
+              <td>Pause Game</td>
+              <td><span class="key-badge">Enter</span> / <span class="key-badge">Arrows</span></td>
+              <td>Full Menu Navigation</td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="guide-section">
+          <div class="guide-heading">MISSION OBJECTIVES & MECHANICS</div>
+          <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin-bottom: 8px;">
+            • 💠 <strong>ENERGY SHARDS:</strong> Collect to increase score and unlock Gold Medals.<br>
+            • ★ <strong>SECRET BONUS SHARDS:</strong> Hidden in every sector for 500 bonus points.<br>
+            • 🔥 <strong>COMBO CHAIN:</strong> Chain shard pickups and enemy kills for up to x4 multiplier.<br>
+            • ⚔️ <strong>COMBAT:</strong> Slash hostile Drones, Stalkers, Shooters, and Heavy Tanks.<br>
+            • 🛡️ <strong>POWER-UPS:</strong> Cyber Shield, Overclock Speed, Ion Thrusters, Plasma Boost.<br>
+            • 📡 <strong>CHECKPOINTS:</strong> Holographic beacons save your respawn coordinates.<br>
+            • 🌀 <strong>EXIT PORTAL:</strong> In Sector 5, destroy the <strong>Core Guardian</strong> to breach the Singularity!
+          </p>
+        </div>
+
+        <button class="cyber-btn" onclick="document.getElementById('btn-close-how-to-play').click()">UNDERSTOOD</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         SETTINGS / OPTIONS MODAL (Spec E & F)
+         ------------------------------------------------------------- -->
+    <div id="settings-modal" class="screen-overlay modal-elevated hidden">
+      <div class="modal-card" style="max-width: 520px;">
+        <span id="btn-close-settings" class="modal-close-corner" role="button" aria-label="Close">✕</span>
+        <h2 class="modal-title">SYSTEM CONFIGURATION</h2>
+
+        <!-- Volume Sliders (Spec E) -->
+        <div class="settings-slider-row">
+          <div class="slider-label">
+            <span>SOUND SFX VOLUME</span>
+            <span id="val-sound-volume">85%</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="range" id="slider-sound-volume" min="0" max="1" step="0.05" value="0.85" class="cyber-slider">
+            <button id="toggle-sound" class="btn-toggle active">ON</button>
+          </div>
+        </div>
+
+        <div class="settings-slider-row">
+          <div class="slider-label">
+            <span>SYNTHWAVE MUSIC VOLUME</span>
+            <span id="val-music-volume">45%</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="range" id="slider-music-volume" min="0" max="1" step="0.05" value="0.45" class="cyber-slider">
+            <button id="toggle-music" class="btn-toggle active">ON</button>
+          </div>
+        </div>
+
+        <!-- Difficulty Setting (Spec D) -->
+        <div class="settings-row">
+          <span>DIFFICULTY</span>
+          <div class="difficulty-toggle-group">
+            <button id="btn-diff-casual" class="btn-diff">CASUAL</button>
+            <button id="btn-diff-normal" class="btn-diff active">NORMAL</button>
+            <button id="btn-diff-hard" class="btn-diff">HARD</button>
+          </div>
+        </div>
+
+        <!-- Accessibility & Visual Toggles (Spec F) -->
+        <div class="settings-row">
+          <span>SCREEN SHAKE</span>
+          <button id="toggle-shake" class="btn-toggle active">ON</button>
+        </div>
+
+        <div class="settings-row">
+          <span>REDUCE MOTION</span>
+          <button id="toggle-reduce-motion" class="btn-toggle">OFF</button>
+        </div>
+
+        <div class="settings-row">
+          <span>HIGH CONTRAST</span>
+          <button id="toggle-high-contrast" class="btn-toggle">OFF</button>
+        </div>
+
+        <div class="settings-row">
+          <span>CRT SCANLINE EFFECT</span>
+          <button id="toggle-crt" class="btn-toggle active">ON</button>
+        </div>
+
+        <div class="settings-row">
+          <span>SPEEDRUN TIMER</span>
+          <button id="toggle-speedrun-timer" class="btn-toggle">OFF</button>
+        </div>
+
+        <div class="settings-row" style="margin-top: 14px; gap: 8px;">
+          <button id="btn-open-rebind" class="cyber-btn" style="flex: 1; font-size: 12px;">REBIND CONTROLS</button>
+          <button id="btn-reset-progress" class="cyber-btn btn-magenta" style="flex: 1; font-size: 12px;">RESET PROGRESS</button>
+        </div>
+
+        <button class="cyber-btn" style="margin-top: 18px;" onclick="document.getElementById('btn-close-settings').click()">SAVE & CLOSE</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         REBIND CONTROLS MODAL (Spec D)
+         ------------------------------------------------------------- -->
+    <div id="rebind-modal" class="screen-overlay modal-elevated hidden">
+      <div class="modal-card" style="max-width: 480px;">
+        <span id="btn-close-rebind" class="modal-close-corner" role="button" aria-label="Close">✕</span>
+        <h2 class="modal-title">CUSTOMIZE CONTROLS</h2>
+        <div id="rebind-list" class="rebind-grid"></div>
+        <div style="display: flex; gap: 10px; margin-top: 16px;">
+          <button id="btn-reset-keybinds" class="cyber-btn btn-magenta" style="flex: 1; font-size: 12px;">RESET DEFAULTS</button>
+          <button class="cyber-btn" style="flex: 1; font-size: 12px;" onclick="document.getElementById('btn-close-rebind').click()">DONE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         STATISTICS & ACHIEVEMENTS MODAL (Spec D)
+         ------------------------------------------------------------- -->
+    <div id="stats-modal" class="screen-overlay modal-elevated hidden">
+      <div class="modal-card" style="max-width: 600px;">
+        <span id="btn-close-stats" class="modal-close-corner" role="button" aria-label="Close">✕</span>
+        <h2 class="modal-title">OPERATIVE DOSSIER</h2>
+
+        <div class="stats-summary-grid" style="margin-bottom: 20px;">
+          <div class="summary-stat-box">
+            <div class="summary-label">TOTAL OPERATIVE TIME</div>
+            <div id="stat-playtime" class="summary-val">00:00</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">CRITICAL FAILURES (DEATHS)</div>
+            <div id="stat-deaths" class="summary-val">0</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">CYBER THREATS PURGED</div>
+            <div id="stat-enemies" class="summary-val">0</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">TOTAL SHARDS SECURED</div>
+            <div id="stat-coins" class="summary-val">0</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">SECRET BONUS SHARDS</div>
+            <div id="stat-bonus-shards" class="summary-val highlight">0 / 5</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">MEDALS SECURED</div>
+            <div id="stat-medals" class="summary-val highlight">0 🥇 / 0 🥈 / 0 🥉</div>
+          </div>
+        </div>
+
+        <div class="guide-heading" style="margin-bottom: 10px;">ACHIEVEMENT BADGES (<span id="achievement-unlocked-count">0 / 9</span>)</div>
+        <div id="achievements-container" class="achievements-grid"></div>
+
+        <button class="cyber-btn" style="margin-top: 20px;" onclick="document.getElementById('btn-close-stats').click()">CLOSE DOSSIER</button>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         PAUSE MENU MODAL
+         ------------------------------------------------------------- -->
+    <div id="pause-modal" class="screen-overlay hidden">
+      <div class="modal-card" style="max-width: 420px;">
+        <h2 class="modal-title" style="color: var(--neon-yellow); text-shadow: 0 0 14px var(--neon-yellow);">MISSION PAUSED</h2>
+        <div style="display: flex; flex-direction: column; gap: 12px; margin: 20px 0;">
+          <button id="btn-pause-resume" class="cyber-btn" tabindex="0">RESUME</button>
+          <button id="btn-pause-restart" class="cyber-btn btn-magenta" tabindex="0">RESTART SECTOR</button>
+          <button id="btn-pause-settings" class="cyber-btn" tabindex="0">OPTIONS</button>
+          <button id="btn-pause-menu" class="cyber-btn" tabindex="0">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         LEVEL COMPLETE MODAL (With Medal & Share Result)
+         ------------------------------------------------------------- -->
+    <div id="level-complete-modal" class="screen-overlay hidden">
+      <div class="modal-card">
+        <h2 class="modal-title" style="color: var(--neon-green); text-shadow: 0 0 16px var(--neon-green);">SECTOR PURGED</h2>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px;">
+          <p id="complete-level-name" style="font-family: var(--font-display); font-size: 15px; letter-spacing: 2px; color: var(--neon-cyan);">NEON DISTRICT</p>
+          <span id="complete-medal-badge" class="medal-badge">🥇 GOLD</span>
+        </div>
+
+        <div class="stats-summary-grid">
+          <div class="summary-stat-box">
+            <div class="summary-label">SECTOR SCORE</div>
+            <div id="complete-score" class="summary-val highlight">1,450</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">ENERGY SHARDS</div>
+            <div id="complete-coins" class="summary-val">12 / 12</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">COMPLETION TIME</div>
+            <div id="complete-time" class="summary-val">00:42</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">ENEMIES PURGED</div>
+            <div id="complete-enemies" class="summary-val">3</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">SPEED BONUS</div>
+            <div id="complete-bonus" class="summary-val" style="color: var(--neon-green);">+600</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">TOTAL ACCUMULATED SCORE</div>
+            <div id="complete-total" class="summary-val highlight">2,050</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
+          <button id="btn-next-level" class="cyber-btn btn-yellow" tabindex="0">NEXT MISSION</button>
+          <button id="btn-complete-share" class="cyber-btn" tabindex="0" title="Copy score to clipboard">SHARE RESULT 📋</button>
+          <button id="btn-complete-menu" class="cyber-btn" tabindex="0">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         GAME OVER MODAL
+         ------------------------------------------------------------- -->
+    <div id="game-over-modal" class="screen-overlay hidden">
+      <div class="modal-card" style="max-width: 460px; border-color: var(--neon-red); box-shadow: 0 0 30px rgba(255, 34, 85, 0.4);">
+        <h2 class="modal-title" style="color: var(--neon-red); text-shadow: 0 0 16px var(--neon-red);">SYSTEM FAILURE</h2>
+        <p style="font-size: 14px; color: #cbd5e1; margin-bottom: 22px;">CRITICAL DAMAGE SUSTAINED. OPERATIVE OFFLINE.</p>
+
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button id="btn-respawn-checkpoint" class="cyber-btn btn-yellow" tabindex="0">RESPAWN AT CHECKPOINT</button>
+          <button id="btn-gameover-restart" class="cyber-btn btn-magenta" tabindex="0">RESTART SECTOR</button>
+          <button id="btn-gameover-menu" class="cyber-btn" tabindex="0">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         VICTORY ARCHIVE MODAL (FINAL LEVEL 5 DEFEAT)
+         ------------------------------------------------------------- -->
+    <div id="victory-modal" class="screen-overlay hidden">
+      <div class="modal-card">
+        <h2 class="modal-title" style="color: var(--neon-cyan); text-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-magenta);">CYBER QUEST COMPLETE</h2>
+        <p style="font-family: var(--font-display); font-size: 14px; letter-spacing: 2px; color: var(--neon-yellow); margin-bottom: 18px;">
+          YOU REACHED THE CORE AND DEFEATED THE GUARDIAN!
+        </p>
+
+        <div class="stats-summary-grid">
+          <div class="summary-stat-box full-width" style="text-align: center;">
+            <div class="summary-label">EVALUATION RATING</div>
+            <div id="victory-rank" class="summary-val rank">RANK: S (LEGENDARY AGENT)</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">TOTAL EXP / SCORE</div>
+            <div id="victory-total-score" class="summary-val highlight">14,250</div>
+          </div>
+          <div class="summary-stat-box">
+            <div class="summary-label">TOTAL SHARDS SECURED</div>
+            <div id="victory-total-coins" class="summary-val">58</div>
+          </div>
+          <div class="summary-stat-box full-width">
+            <div class="summary-label">TOTAL OPERATIONAL TIME</div>
+            <div id="victory-total-time" class="summary-val">05:42</div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 14px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
+          <button id="btn-victory-play-again" class="cyber-btn btn-yellow" tabindex="0">PLAY AGAIN</button>
+          <button id="btn-victory-share" class="cyber-btn" tabindex="0" title="Copy score to clipboard">SHARE RESULT 📋</button>
+          <button id="btn-victory-menu" class="cyber-btn" tabindex="0">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration skipped:', e));
+      });
+    }
+  </script>
+
+  <!-- Game Scripts (Dependency Ordered) -->
+  <script src="src/constants.js"></script>
+  <script src="src/storage.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/input.js"></script>
+  <script src="src/particles.js"></script>
+  <script src="src/camera.js"></script>
+  <script src="src/player.js"></script>
+  <script src="src/enemy.js"></script>
+  <script src="src/boss.js"></script>
+  <script src="src/level_data.js"></script>
+  <script src="src/level.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
