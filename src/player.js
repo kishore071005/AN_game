@@ -115,14 +115,24 @@
       this.isDead   = false;
       this.invulnTimer = 1.0;
       this.isJumping   = false;
+      this.onGround    = false;
+      this.wasOnGround = false;
+      this.coyoteTimer    = 0;
+      this.jumpBufferTimer = 0;
+      this.hasDoubleJumped = false;
+      this.canDoubleJump   = false;
       this.state = 'idle';
       this.isAttacking = false;
       this.attackActiveTimer = 0;
+      this.attackCooldownTimer = 0;
       this.attackHitbox = null;
       this.hitStopTimer = 0;
       this.scaleX = 1.0;
       this.scaleY = 1.0;
+      this.squashTimer = 0;
       this.afterimages = [];
+      this._lastPlatformSpeedX = 0;
+      this._platformSpeedTimer = 0;
 
       if (window.CQ.Storage) {
         window.CQ.Storage.addStat('deaths', 1);

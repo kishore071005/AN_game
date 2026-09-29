@@ -19,6 +19,7 @@
       this.name = 'CORE GUARDIAN';
       this.isBoss = true;
       this.contactDamage = 25;
+      this.laserDamageCooldown = 0; // Cooldown to prevent laser from hitting 60x/sec
 
       this.phase = 1;
       this.state = 'hover'; // 'hover', 'charging_laser', 'firing_laser', 'slam_windup', 'slam_fall', 'slam_recovery', 'vulnerable'
@@ -104,6 +105,7 @@
     update(dt, player, level, projectiles, camera) {
       this.animTime += dt;
       if (this.hitFlashTimer > 0) this.hitFlashTimer -= dt;
+      if (this.laserDamageCooldown > 0) this.laserDamageCooldown -= dt;
 
       // Handle Death Sequence
       if (this.isDead) {
@@ -162,12 +164,15 @@
 
         case 'firing_laser':
           this.timer -= dt;
-          // Damage player if inside ground sweep beam
-          if (this.laserBeam && !this.laserBeam.warning) {
+          // Damage player if inside ground sweep beam (with cooldown to prevent 60x/sec hits)
+          if (this.laserBeam && !this.laserBeam.warning && this.laserDamageCooldown <= 0) {
             const beamTop = this.laserBeam.y;
             const beamBottom = this.laserBeam.y + this.laserBeam.height;
             if (player.y + player.height > beamTop && player.y < beamBottom) {
-              player.takeDamage(25, this.x);
+              const hit = player.takeDamage(25, this.x);
+              if (hit) {
+                this.laserDamageCooldown = 0.5; // Only damage once per 0.5s
+              }
             }
           }
           if (this.timer <= 0) {
@@ -322,6 +327,43 @@
     render(ctx, camera) {
       const screenX = Math.round(this.x - camera.x);
       const screenY = Math.round(this.y - camera.y);
+
+      // Boss HP Bar at top of screen
+      if (!this.isDead && this.hp > 0) {
+        ctx.save();
+        const barW = 280;
+        const barH = 12;
+        const barX = (camera.width - barW) / 2;
+        const barY = 18;
+        const hpPct = Math.max(0, this.hp / this.maxHp);
+
+        // Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(barX - 2, barY - 2, barW + 4, barH + 4);
+
+        // HP fill
+        let barColor = C.COLORS.GREEN;
+        if (hpPct <= 0.33) barColor = C.COLORS.RED;
+        else if (hpPct <= 0.66) barColor = C.COLORS.ORANGE;
+        ctx.fillStyle = barColor;
+        ctx.shadowColor = barColor;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(barX, barY, barW * hpPct, barH);
+
+        // Border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 0;
+        ctx.strokeRect(barX, barY, barW, barH);
+
+        // Boss name label
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`⚙ ${this.name} — PHASE ${this.phase}`, camera.width / 2, barY - 4);
+        ctx.textAlign = 'start';
+        ctx.restore();
+      }
 
       // Render Laser Beam if active
       if (this.laserBeam) {

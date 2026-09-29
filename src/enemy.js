@@ -211,14 +211,15 @@
       this.x += this.vx * dt;
       this.y += this.vy * dt;
 
-      // Platform floor resolution
+      // Platform floor resolution (tolerance widened to prevent tunneling at high vy)
       this.onGround = false;
       for (const p of level.platforms) {
+        const tolerance = Math.max(20, Math.abs(this.vy * dt) + 8);
         if (
           this.x + this.width > p.x &&
           this.x < p.x + p.width &&
           this.y + this.height >= p.y &&
-          this.y + this.height <= p.y + 16 &&
+          this.y + this.height <= p.y + tolerance &&
           this.vy >= 0
         ) {
           this.y = p.y - this.height;
@@ -393,13 +394,14 @@
       this.x += this.vx * dt;
       this.y += this.vy * dt;
 
-      // Platform floor resolution
+      // Platform floor resolution (tolerance widened to prevent tunneling at high vy)
       for (const p of level.platforms) {
+        const tolerance = Math.max(20, Math.abs(this.vy * dt) + 8);
         if (
           this.x + this.width > p.x &&
           this.x < p.x + p.width &&
           this.y + this.height >= p.y &&
-          this.y + this.height <= p.y + 16 &&
+          this.y + this.height <= p.y + tolerance &&
           this.vy >= 0
         ) {
           this.y = p.y - this.height;

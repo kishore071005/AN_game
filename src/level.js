@@ -166,7 +166,8 @@
           fp.vy += C.GRAVITY * dt;
           fp.currentY += fp.vy * dt;
           fp.timer += dt;
-          if (fp.timer > 1.8) {
+          // Respawn early if platform falls off-screen or timer expires
+          if (fp.timer > 1.8 || fp.currentY > this.height + 100) {
             fp.state = 'respawning';
             fp.timer = 0;
           }
