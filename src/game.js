@@ -251,10 +251,12 @@
       if (!this.player || !this.level) return;
 
       this.player.respawn(true);
+      this.deathTriggered = false; // Reset so next death can trigger game-over again
       this.state = 'PLAYING';
       window.CQ.UI.hideAllModals();
       window.CQ.UI.showHUD(true);
     }
+
 
     togglePause() {
       if (this.state === 'PLAYING') {

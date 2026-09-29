@@ -355,6 +355,13 @@ html, body {
   transition: opacity 0.3s ease;
 }
 
+/* Global hidden utility — applies to ALL elements with .hidden class */
+.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 .screen-overlay.hidden {
   display: none !important;
   opacity: 0;
