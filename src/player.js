@@ -91,6 +91,10 @@
       // Attack arc visual parameters
       this._arcAngle   = 0;
       this._arcAlpha   = 0;
+
+      // Moving platform momentum transfer
+      this._lastPlatformSpeedX = 0;
+      this._platformSpeedTimer = 0;
     }
 
     setCheckpoint(x, y) {
@@ -329,6 +333,11 @@
         this.invulnTimer = Math.max(0, this.invulnTimer - dt);
       }
 
+      // Moving platform momentum decay timer
+      if (this._platformSpeedTimer > 0) {
+        this._platformSpeedTimer = Math.max(0, this._platformSpeedTimer - dt);
+      }
+
       // Attack countdowns
       if (this.attackCooldownTimer > 0) {
         this.attackCooldownTimer -= dt;
@@ -412,6 +421,11 @@
       if (this.jumpBufferTimer > 0) {
         if (canJumpGround) {
           this.vy              = C.PLAYER.JUMP_FORCE;
+          // Transfer moving platform momentum to jump if moving in same direction
+          if (this._platformSpeedTimer > 0 && Math.abs(this._lastPlatformSpeedX) > 10) {
+            this.vx += this._lastPlatformSpeedX * 0.55;
+            this._platformSpeedTimer = 0;
+          }
           this.onGround        = false;
           this.coyoteTimer     = 0;
           this.jumpBufferTimer = 0;

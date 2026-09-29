@@ -114,7 +114,7 @@
         { x: 2200, y: 540, width: 700, height: 110 },
 
         { x: 260, y: 430, width: 140, height: 24 },
-        { x: 840, y: 420, width: 130, height: 24 },
+        { x: 860, y: 390, width: 130, height: 24 },
         { x: 1100, y: 360, width: 140, height: 24 },
         { x: 1580, y: 400, width: 120, height: 24 },
         { x: 1820, y: 320, width: 130, height: 24 },
@@ -124,7 +124,7 @@
       ],
 
       movingPlatforms: [
-        { x: 520, y: 460, width: 110, height: 20, minX: 490, maxX: 750, speed: 110, axis: 'x' },
+        { x: 500, y: 490, width: 130, height: 20, minX: 470, maxX: 780, speed: 110, axis: 'x' },
         { x: 1300, y: 480, width: 110, height: 20, minY: 300, maxY: 500, speed: 90, axis: 'y' },
         { x: 1980, y: 380, width: 110, height: 20, minX: 1960, maxX: 2180, speed: 120, axis: 'x' }
       ],
@@ -142,8 +142,8 @@
       collectibles: [
         { x: 180, y: 500, type: 'coin' },
         { x: 310, y: 390, type: 'coin' },
-        { x: 620, y: 420, type: 'coin' },
-        { x: 890, y: 380, type: 'coin' },
+        { x: 620, y: 440, type: 'coin' },
+        { x: 890, y: 350, type: 'coin' },
         { x: 1150, y: 320, type: 'coin' },
 
         { x: 1350, y: 250, type: 'shield' },
@@ -164,7 +164,7 @@
       ],
 
       enemies: [
-        { type: 'drone', x: 960, y: 500, patrolDist: 100 },
+        { type: 'drone', x: 1020, y: 470, patrolDist: 70 },
         { type: 'drone', x: 1640, y: 360, patrolDist: 80 },
         { type: 'drone', x: 2320, y: 500, patrolDist: 110 },
         { type: 'drone', x: 2580, y: 490, patrolDist: 90 }
@@ -286,9 +286,9 @@
       ],
 
       movingPlatforms: [
-        { x: 420, y: 520, width: 100, height: 20, minX: 420, maxX: 660, speed: 130, axis: 'x' },
+        { x: 420, y: 520, width: 120, height: 20, minX: 400, maxX: 680, speed: 130, axis: 'x' },
         { x: 1080, y: 520, width: 100, height: 20, minY: 360, maxY: 540, speed: 110, axis: 'y' },
-        { x: 1840, y: 480, width: 100, height: 20, minX: 1800, maxX: 2000, speed: 140, axis: 'x' }
+        { x: 1840, y: 480, width: 110, height: 20, minX: 1800, maxX: 2020, speed: 140, axis: 'x' }
       ],
 
       fallingPlatforms: [

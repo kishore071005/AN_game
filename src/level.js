@@ -353,44 +353,50 @@
         }
       }
 
-      // 2. Moving Platforms
+      // 2. Moving Platforms (Sweep check & anti-tunneling)
       for (const mp of this.movingPlatforms) {
-        if (player.x + player.width > mp.x && player.x < mp.x + mp.width) {
+        if (player.x + player.width >= mp.x - 4 && player.x <= mp.x + mp.width + 4) {
           const prevBottom = player.prevY + player.height;
           const currBottom = player.y + player.height;
-          if (
-            player.vy >= 0 &&
-            prevBottom <= mp.y + 8 &&
-            currBottom >= mp.y &&
-            currBottom <= mp.y + Math.max(20, player.vy * dt + 10)
-          ) {
+          const isFallingOrStanding = player.vy >= 0;
+          const wasAbove = prevBottom <= mp.y + Math.max(16, player.vy * dt + 6);
+          const isNowOnOrBelow = currBottom >= mp.y - 2;
+          const notTooFarBelow = currBottom <= mp.y + Math.max(28, player.vy * dt + 14);
+
+          if (isFallingOrStanding && wasAbove && isNowOnOrBelow && notTooFarBelow) {
             player.y = mp.y - player.height;
             player.vy = 0;
             onGroundThisFrame = true;
 
-            if (mp.axis === 'x') {
-              player.x += (mp.speed || 100) * dt;
-            } else if (mp.axis === 'y' && (mp.speed || 0) > 0) {
-              player.y += mp.speed * dt;
+            const spdX = (typeof mp.speed === 'number' && mp.axis === 'x') ? mp.speed : 0;
+            const spdY = (typeof mp.speed === 'number' && mp.axis === 'y') ? mp.speed : 0;
+
+            if (spdX !== 0) {
+              player.x += spdX * dt;
+              player._lastPlatformSpeedX = spdX;
+              player._platformSpeedTimer = 0.12;
+            }
+            if (spdY !== 0) {
+              player.y += spdY * dt;
             }
           }
         }
       }
 
-      // 3. Falling Platforms
+      // 3. Falling Platforms (Sweep check & anti-tunneling)
       for (const fp of this.fallingPlatforms) {
         if (fp.state === 'respawning') continue;
 
         const currentY = fp.currentY;
-        if (player.x + player.width > fp.x && player.x < fp.x + fp.width) {
+        if (player.x + player.width >= fp.x - 3 && player.x <= fp.x + fp.width + 3) {
           const prevBottom = player.prevY + player.height;
           const currBottom = player.y + player.height;
-          if (
-            player.vy >= 0 &&
-            prevBottom <= currentY + 8 &&
-            currBottom >= currentY &&
-            currBottom <= currentY + Math.max(20, player.vy * dt + 10)
-          ) {
+          const isFallingOrStanding = player.vy >= 0;
+          const wasAbove = prevBottom <= currentY + Math.max(16, player.vy * dt + 6);
+          const isNowOnOrBelow = currBottom >= currentY - 2;
+          const notTooFarBelow = currBottom <= currentY + Math.max(28, player.vy * dt + 14);
+
+          if (isFallingOrStanding && wasAbove && isNowOnOrBelow && notTooFarBelow) {
             player.y = currentY - player.height;
             player.vy = 0;
             onGroundThisFrame = true;
@@ -636,7 +642,9 @@
         ctx.stroke();
       }
 
-      // LAYER 3: Distant Megacity Silhouette (Parallax factor 0.18)
+      // LAYER 3: Distant Megacity Silhouette (Parallax factor 0.18, atmospheric alpha)
+      ctx.save();
+      ctx.globalAlpha = 0.35;
       const skylineOffset = -(camera.x * 0.18);
       ctx.fillStyle = '#070b16';
       for (let i = -2; i < 24; i++) {
@@ -649,8 +657,11 @@
         ctx.fillRect(bx + 40, h - bh - 8, 3, 8);
         ctx.fillStyle = '#070b16';
       }
+      ctx.restore();
 
-      // LAYER 4: Midground High-Tech Cyber Structures (Parallax factor 0.35)
+      // LAYER 4: Midground High-Tech Cyber Structures (Parallax factor 0.35, atmospheric alpha)
+      ctx.save();
+      ctx.globalAlpha = 0.45;
       const midOffset = -(camera.x * 0.35);
       ctx.fillStyle = '#0e1628';
       for (let j = -2; j < 18; j++) {
@@ -668,6 +679,7 @@
         ctx.stroke();
         ctx.fillStyle = '#0e1628';
       }
+      ctx.restore();
 
       ctx.restore();
     }
@@ -733,8 +745,50 @@
         ctx.shadowBlur = 0;
       }
 
-      // 2. Moving Platforms
+      // 2. Moving Platforms (with Cyber Track Rail)
       for (const mp of this.movingPlatforms) {
+        // Draw kinetic cyber transit rail
+        if (mp.axis === 'x' && mp.minX !== undefined && mp.maxX !== undefined) {
+          const railX1 = Math.round(mp.minX - camera.x);
+          const railX2 = Math.round(mp.maxX + mp.width - camera.x);
+          const railY  = Math.round(mp.y + mp.height / 2 - camera.y);
+          if (railX2 >= -20 && railX1 <= camera.width + 20) {
+            ctx.save();
+            ctx.strokeStyle = `${pal.primary}40`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(railX1, railY);
+            ctx.lineTo(railX2, railY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            // End guide markers
+            ctx.fillStyle = pal.primary;
+            ctx.fillRect(railX1 - 2, railY - 4, 4, 8);
+            ctx.fillRect(railX2 - 2, railY - 4, 4, 8);
+            ctx.restore();
+          }
+        } else if (mp.axis === 'y' && mp.minY !== undefined && mp.maxY !== undefined) {
+          const railX  = Math.round(mp.x + mp.width / 2 - camera.x);
+          const railY1 = Math.round(mp.minY - camera.y);
+          const railY2 = Math.round(mp.maxY + mp.height - camera.y);
+          if (railX >= -20 && railX <= camera.width + 20) {
+            ctx.save();
+            ctx.strokeStyle = `${pal.primary}40`;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([6, 6]);
+            ctx.beginPath();
+            ctx.moveTo(railX, railY1);
+            ctx.lineTo(railX, railY2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = pal.primary;
+            ctx.fillRect(railX - 4, railY1 - 2, 8, 4);
+            ctx.fillRect(railX - 4, railY2 - 2, 8, 4);
+            ctx.restore();
+          }
+        }
+
         const sx = Math.round(mp.x - camera.x);
         const sy = Math.round(mp.y - camera.y);
 
